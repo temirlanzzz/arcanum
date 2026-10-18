@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Arcanum — The Endless Emporium</title>
+  <meta name="description" content="Shopping as a fantasy library: fly through enchanted shelves in three.js, one wing per category, a red price tag on every item.">
+  <meta name="theme-color" content="#07060c">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307060c'/%3E%3Cpath d='M32 8 L52 56 H44 L32 26 L20 56 H12 Z' fill='%23e8c982'/%3E%3Ccircle cx='32' cy='44' r='5' fill='%23ef2b35'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      --gold: #e8c982; --gold-d: #a8823e; --ink: #f4ead6; --mute: #b8ab92; --bg: rgba(14, 10, 20, .72); --line: rgba(232, 201, 130, .28);
+      --red: #e3262f; --serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+      --sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: #07060c; color: var(--ink); font-family: var(--sans); overflow: hidden; overscroll-behavior: none; }
+    canvas#gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; outline: none; }
+    canvas#gl.hovering { cursor: pointer; }
+    canvas#gl:active { cursor: grabbing; }
+    .panel { background: var(--bg); border: 1px solid var(--line); backdrop-filter: blur(10px) saturate(1.2); -webkit-backdrop-filter: blur(10px) saturate(1.2); border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06); }
+    button { font: inherit; color: inherit; }
+
+    /* loader */
+    #loader { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 40%, #1d1430 0%, #07060c 70%); transition: opacity .9s ease, visibility .9s; }
+    #loader.done { opacity: 0; visibility: hidden; }
+    #loader .in { text-align: center; padding: 24px; }
+    #loader h1 { font: 400 clamp(40px, 9vw, 92px)/1 var(--serif); letter-spacing: .28em; margin: 0 0 6px .28em; color: var(--gold); text-shadow: 0 0 40px rgba(232,201,130,.35); }
+    #loader p { margin: 0 0 28px; color: var(--mute); font: italic 18px var(--serif); }
+    #loader .bar { width: min(340px, 70vw); height: 3px; margin: 0 auto; background: rgba(232,201,130,.15); border-radius: 3px; overflow: hidden; }
+    #loader .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--gold-d), var(--gold)); transition: width .3s; }
+    #loader small { display: block; margin-top: 14px; color: var(--mute); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; }
+
+    /* top left: crest, level, quests */
+    #crest { position: fixed; top: 16px; left: 16px; z-index: 10; padding: 12px 16px 14px; width: 260px; }
+    #crest .row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+    #crest b { font: 400 22px var(--serif); letter-spacing: .22em; color: var(--gold); }
+    #crest .lv { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--mute); white-space: nowrap; }
+    #crest .title { font: italic 13px var(--serif); color: var(--ink); margin-top: 2px; }
+    #xp { height: 6px; border-radius: 6px; margin-top: 8px; background: rgba(255,255,255,.08); overflow: hidden; position: relative; }
+    #xp i { position: absolute; inset: 0 auto 0 0; width: 0%; background: linear-gradient(90deg, #8b5cf6, #e8c982); box-shadow: 0 0 12px #e8c982; transition: width .6s cubic-bezier(.2,.9,.2,1); }
+    #quests { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+    #quests h4 { margin: 0 0 6px; font: 400 11px var(--sans); letter-spacing: .16em; text-transform: uppercase; color: var(--gold); }
+    #quests li { list-style: none; display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.35; padding: 3px 0; color: var(--ink); }
+    #quests ul { margin: 0; padding: 0; }
+    #quests li i { flex: 0 0 14px; height: 14px; margin-top: 2px; border: 1px solid var(--gold-d); border-radius: 3px; position: relative; }
+    #quests li.done { color: var(--mute); text-decoration: line-through; text-decoration-color: rgba(232,201,130,.5); }
+    #quests li.done i { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 10px var(--gold); }
+    #quests li.done i::after { content: ''; position: absolute; left: 4px; top: 0; width: 4px; height: 8px; border: solid #1a1206; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+    #quests li span.x { margin-left: auto; color: var(--gold); font-size: 11px; white-space: nowrap; }
+
+    /* top right: satchel */
+    #satchel { position: fixed; top: 16px; right: 16px; z-index: 10; display: flex; align-items: center; gap: 12px; padding: 10px 16px 10px 12px; cursor: pointer; }
+    #satchel .ico { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 10px; background: radial-gradient(circle at 50% 35%, #3a2a18, #1a1208); border: 1px solid var(--gold-d); position: relative; font-size: 20px; }
+    #satchel .ico em { position: absolute; top: -7px; right: -7px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: var(--red); color: #fff; font: 700 11px/20px var(--sans); text-align: center; font-style: normal; box-shadow: 0 0 0 2px #120c08; }
+    #satchel.bump .ico { animation: bump .6s cubic-bezier(.2,1.6,.4,1); }
+    @keyframes bump { 30% { transform: scale(1.3) rotate(-8deg); } 60% { transform: scale(.95) rotate(4deg); } }
+    #satchel .t small { display: block; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--mute); }
+    #satchel .t b { font: 400 18px var(--serif); color: var(--gold); }
+    #bag { position: fixed; top: 82px; right: 16px; z-index: 12; width: 300px; max-height: 60vh; overflow: auto; padding: 14px 16px; display: none; }
+    #bag.open { display: block; }
+    #bag h4 { margin: 0 0 8px; font: 400 18px var(--serif); color: var(--gold); }
+    #bag ul { margin: 0; padding: 0; }
+    #bag li { list-style: none; display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+    #bag li b { color: var(--gold); font-weight: 400; font-family: var(--serif); white-space: nowrap; }
+    #bag .empty { color: var(--mute); font: italic 14px var(--serif); }
+    #bag .tot { display: flex; justify-content: space-between; margin-top: 10px; font: 400 16px var(--serif); }
+
+    /* nav */
+    #nav { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 10; display: flex; gap: 6px; padding: 6px; max-width: calc(100vw - 32px); overflow-x: auto; scrollbar-width: none; }
+    #nav::-webkit-scrollbar { display: none; }
+    #nav button { flex: 0 0 auto; border: 1px solid transparent; background: transparent; border-radius: 10px; padding: 7px 11px; font-size: 12px; letter-spacing: .04em; color: var(--ink); cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; transition: background .2s, border-color .2s; }
+    #nav button i { font-style: normal; color: var(--c, var(--gold)); font-size: 14px; text-shadow: 0 0 10px var(--c, var(--gold)); }
+    #nav button:hover, #nav button.here { background: rgba(232,201,130,.1); border-color: var(--line); }
+    #nav button.seen::after { content: '\2726'; font-size: 9px; color: var(--gold); margin-left: 2px; }
+
+    #hint { position: fixed; left: 50%; bottom: 76px; transform: translateX(-50%); z-index: 9; padding: 8px 14px; font-size: 12px; color: var(--mute); white-space: nowrap; transition: opacity 1s; pointer-events: none; }
+    #hint kbd { font: 600 11px var(--sans); color: var(--ink); background: rgba(255,255,255,.08); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 1px 5px; margin: 0 1px; }
+    #hint.hide { opacity: 0; }
+    #cross { position: fixed; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; z-index: 9; display: none; pointer-events: none; }
+    #cross::before, #cross::after { content: ''; position: absolute; background: var(--gold); box-shadow: 0 0 6px var(--gold); }
+    #cross::before { left: 8px; top: 2px; width: 2px; height: 14px; } #cross::after { top: 8px; left: 2px; height: 2px; width: 14px; }
+    body.locked #cross { display: block; }
+
+    #tip { position: fixed; z-index: 11; pointer-events: none; padding: 8px 12px; transform: translate(14px, -50%); opacity: 0; transition: opacity .15s; max-width: 260px; }
+    #tip.on { opacity: 1; }
+    #tip b { display: block; font: 400 15px var(--serif); color: var(--ink); }
+    #tip span { display: inline-block; margin-top: 4px; background: var(--red); color: #fff; font: 700 12px var(--sans); padding: 2px 7px; border-radius: 4px; }
+    #tip small { margin-left: 8px; color: var(--mute); font-size: 11px; }
+
+    /* inspection card */
+    #card { position: fixed; right: 20px; top: 50%; z-index: 20; width: min(360px, calc(100vw - 32px)); padding: 20px 22px; transform: translate(30px, -50%); opacity: 0; visibility: hidden; transition: opacity .45s, transform .55s cubic-bezier(.2,.9,.2,1), visibility .45s; }
+    #card.on { opacity: 1; visibility: visible; transform: translate(0, -50%); }
+    #card .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--c, var(--gold)); }
+    #card h2 { margin: 8px 0 2px; font: 400 26px/1.15 var(--serif); }
+    #card .brand { color: var(--mute); font-size: 13px; }
+    #card .stars { margin-top: 10px; color: #ffcc55; letter-spacing: 2px; font-size: 15px; }
+    #card .stars small { color: var(--mute); letter-spacing: 0; margin-left: 6px; font-size: 12px; }
+    #card .price { display: flex; align-items: center; gap: 12px; margin: 14px 0 10px; }
+    #card .price b { font: 700 28px var(--serif); color: #fff; background: linear-gradient(180deg, #ef2b35, #a50f18); padding: 4px 14px 6px; border-radius: 6px 6px 6px 6px; clip-path: polygon(10px 0, 100% 0, 100% 100%, 10px 100%, 0 50%); padding-left: 20px; }
+    #card .price small { color: #8fe3a0; font-size: 12px; }
+    #card p { margin: 0 0 12px; font: 15px/1.5 var(--serif); color: #e8dcc6; }
+    #card .perks { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+    #card .perks span { font-size: 11px; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--mute); }
+    #card .set { font: italic 13px var(--serif); color: var(--gold); margin: -4px 0 12px; }
+    #card .act { display: flex; gap: 8px; }
+    #card .act button { flex: 1; padding: 12px 14px; border-radius: 10px; cursor: pointer; font-size: 14px; letter-spacing: .02em; }
+    #add { border: 0; background: linear-gradient(180deg, #f2d48e, #b88a3e); color: #1a1206; font-weight: 700; box-shadow: 0 6px 24px rgba(232,201,130,.35); }
+    #add:hover { filter: brightness(1.08); }
+    #close { border: 1px solid var(--line); background: rgba(255,255,255,.04); flex: 0 0 auto !important; }
+    #card .rot { margin-top: 12px; font-size: 11px; color: var(--mute); text-align: center; }
+
+    #toasts { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 30; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
+    .toast { padding: 10px 18px; font: 15px var(--serif); color: var(--ink); animation: toast 3.4s forwards; white-space: nowrap; }
+    .toast b { color: var(--gold); font-weight: 400; }
+    .toast em { font-style: normal; color: #b48cff; margin-left: 8px; font-family: var(--sans); font-size: 12px; font-weight: 700; }
+    @keyframes toast { 0% { opacity: 0; transform: translateY(-12px) scale(.96); } 10%, 82% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-8px); } }
+    .spark { position: fixed; z-index: 40; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, #fff 0%, #ffd67a 40%, rgba(255,160,60,0) 70%); }
+    .xpfly { position: fixed; z-index: 40; pointer-events: none; font: 700 16px var(--sans); color: #d6b8ff; text-shadow: 0 0 12px #8b5cf6; animation: xpfly 1.4s forwards; }
+    @keyframes xpfly { from { opacity: 0; transform: translate(-50%, 0); } 15% { opacity: 1; } to { opacity: 0; transform: translate(-50%, -60px); } }
+    #levelup { position: fixed; inset: 0; z-index: 35; pointer-events: none; display: grid; place-items: center; opacity: 0; }
+    #levelup.on { animation: lvl 2.4s forwards; }
+    #levelup div { text-align: center; font: 400 48px var(--serif); color: var(--gold); text-shadow: 0 0 40px rgba(232,201,130,.7); letter-spacing: .1em; }
+    #levelup small { display: block; font: italic 18px var(--serif); color: var(--ink); letter-spacing: 0; }
+    @keyframes lvl { 0% { opacity: 0; transform: scale(.8); } 15%, 70% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.1); } }
+
+    #touch { position: fixed; inset: auto 0 76px 0; z-index: 9; display: none; justify-content: space-between; padding: 0 16px; pointer-events: none; }
+    body.coarse #touch { display: flex; }
+    #touch div { display: flex; flex-direction: column; gap: 10px; pointer-events: auto; }
+    #touch button { width: 54px; height: 54px; border-radius: 50%; border: 1px solid var(--line); background: var(--bg); backdrop-filter: blur(8px); color: var(--gold); font-size: 20px; touch-action: none; }
+    #touch button:active { background: rgba(232,201,130,.2); }
+
+    body.capture #hint, body.capture #tip { display: none; }
+    body.inspecting #nav, body.inspecting #touch, body.inspecting #hint { opacity: 0; pointer-events: none; }
+    #nav, #touch { transition: opacity .4s; }
+
+    @media (max-width: 760px) {
+      #crest { width: auto; right: 104px; padding: 10px 12px; top: 12px; left: 12px; }
+      #crest b { font-size: 17px; }
+      #quests { display: none; }
+      #crest.open #quests { display: block; }
+      #satchel { top: 12px; right: 12px; padding: 8px; }
+      #satchel .t { display: none; }
+      #bag { top: 72px; right: 12px; width: calc(100vw - 24px); }
+      #hint { display: none; }
+      #card { top: auto; bottom: 12px; right: 12px; left: 12px; width: auto; transform: translateY(30px); padding: 16px 18px; }
+      #card.on { transform: none; }
+      #card h2 { font-size: 21px; }
+      #card p { font-size: 14px; }
+      #card .perks { display: none; }
+      #nav { bottom: 12px; }
+    }
+    @media (prefers-reduced-motion: reduce) { .toast, #levelup.on, .xpfly { animation-duration: .01s; } }
+  </style>
+</head>
+<body>
+  <canvas id="gl" tabindex="0" aria-label="Arcanum 3D library. Drag to look, W A S D to fly, click a tagged item to inspect it."></canvas>
+
+  <div id="loader"><div class="in">
+    <h1>ARCANUM</h1>
+    <p>The Endless Emporium</p>
+    <div class="bar"><i id="lbar"></i></div>
+    <small id="lmsg">Lighting the candles…</small>
+  </div></div>
+
+  <div id="crest" class="panel">
+    <div class="row"><b>ARCANUM</b><span class="lv" id="lv">Level 1</span></div>
+    <div class="title" id="ltitle">Apprentice Shopper</div>
+    <div id="xp"><i></i></div>
+    <div id="quests"><h4>Quests</h4><ul id="qlist"></ul></div>
+  </div>
+
+  <div id="satchel" class="panel" role="button" tabindex="0" aria-label="Open satchel">
+    <div class="ico">&#128092;<em id="count">0</em></div>
+    <div class="t"><small>Satchel</small><b id="total">$0.00</b></div>
+  </div>
+  <div id="bag" class="panel"><h4>Your satchel</h4><ul id="baglist"></ul><div class="tot"><span>Total</span><b id="bagtotal">$0.00</b></div></div>
+
+  <div id="hint" class="panel">Drag to look · <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> fly · <kbd>Space</kbd>/<kbd>Shift</kbd> up/down · <kbd>F</kbd> flight mode · click any tagged item</div>
+  <div id="cross"></div>
+  <div id="tip" class="panel"><b></b><span></span><small>click to inspect</small></div>
+  <nav id="nav" class="panel" aria-label="Fly to a wing"></nav>
+  <div id="touch"><div><button data-h="fwd" aria-label="Fly forward">&#9650;</button><button data-h="back" aria-label="Fly back">&#9660;</button></div><div><button data-h="up" aria-label="Rise">&#10514;</button><button data-h="down" aria-label="Descend">&#10515;</button></div></div>
+
+  <aside id="card" class="panel" aria-live="polite">
+    <span class="chip" id="cchip"></span>
+    <h2 id="cname"></h2>
+    <div class="brand" id="cbrand"></div>
+    <div class="stars" id="cstars"></div>
+    <div class="price"><b id="cprice"></b><small>&#10003; In stock · owl delivery in 2 days</small></div>
+    <div class="set" id="cset"></div>
+    <p id="cdesc"></p>
+    <div class="perks"><span>&#10022; Enchantment warranty</span><span>Free returns by portal</span><span>Gift-wrap in vellum</span></div>
+    <div class="act"><button id="add">Add to satchel &#10022;</button><button id="close" aria-label="Close inspection">Esc</button></div>
+    <div class="rot">Drag to turn it · scroll to zoom</div>
+  </aside>
+
+  <div id="toasts"></div>
+  <div id="levelup"><div><span id="lvltext">Level 2</span><small id="lvlsub">Curious Browser</small></div></div>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
