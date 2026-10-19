@@ -8,6 +8,8 @@ you can turn it in your hands, read the card and drop it into your satchel.
 Everything is procedural: geometry, textures, the stained glass and the star-painted
 vault are made in code at startup. There are no image or model downloads.
 
+**Live:** https://temirlan.work/arcanum/ · https://temirlanzzz.github.io/arcanum/
+
 ## What's inside
 
 - **A nave and ten wings.** Kitchen, Electronics, Furniture, Books, Beauty, Garden,
