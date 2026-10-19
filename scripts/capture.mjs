@@ -34,6 +34,14 @@ try {
   // hero still at 1600 x 1000
   {
     const page = await shoot(1600, 1000);
+    if (process.env.OPEN) {
+      // debugging aid: product pages -> out/pdp-<sku>.png
+      for (const sku of process.env.OPEN.split(',')) {
+        await page.evaluate(s => window.__open(s), sku);
+        await page.screenshot({ path: join(out, `pdp-${sku}.png`), timeout: 180000 });
+        await page.evaluate(() => window.__close());
+      }
+    }
     if (POSE && POSE.includes(';')) {
       // debugging aid: several poses -> out/pose-N.png
       let i = 0;
@@ -48,8 +56,8 @@ try {
       const p = POSE.split(',').map(Number);
       await page.evaluate(p => window.__pose(...p), p);
     } else {
-      // hero still: the Furniture wing seen from under its arch
-      await page.evaluate(() => window.__pose(-8, 3.0, -24, 1.07, -0.2, 3));
+      // hero still: the Furniture department from the nave
+      await page.evaluate(() => window.__pose(-6.0, 1.64, -5.0, Math.PI / 2 - 0.02, -0.15, 3));
     }
     await page.screenshot({ path: join(out, 'preview.png'), timeout: 180000 });
     execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', join(out, 'preview.png'), '-quality', '86', join(out, 'preview.webp')]);

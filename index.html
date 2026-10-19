@@ -3,200 +3,206 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Arcanum — The Endless Emporium</title>
-  <meta name="description" content="Shopping as a fantasy library: fly through enchanted shelves in three.js, one wing per category, a red price tag on every item.">
-  <meta name="theme-color" content="#07060c">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307060c'/%3E%3Cpath d='M32 8 L52 56 H44 L32 26 L20 56 H12 Z' fill='%23e8c982'/%3E%3Ccircle cx='32' cy='44' r='5' fill='%23ef2b35'/%3E%3C/svg%3E">
+  <title>Arcanum — Library Department Store</title>
+  <meta name="description" content="A department store inside a daylit library, in three.js: walk the aisles, inspect real scanned products in 3D and add them to your bag.">
+  <meta name="theme-color" content="#f4f1ec">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23111'/%3E%3Cpath d='M32 12 L50 52 H43 L32 27 L21 52 H14 Z' fill='%23f4f1ec'/%3E%3Crect x='26' y='40' width='12' height='4' fill='%23b3131c'/%3E%3C/svg%3E">
   <style>
     :root {
-      --gold: #e8c982; --gold-d: #a8823e; --ink: #f4ead6; --mute: #b8ab92; --bg: rgba(14, 10, 20, .72); --line: rgba(232, 201, 130, .28);
-      --red: #e3262f; --serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
-      --sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      --ink: #141414; --mute: #6b6760; --line: rgba(20, 20, 20, .1); --bg: #f4f1ec; --card: rgba(255, 255, 255, .86); --red: #b3131c;
+      --serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+      --sans: ui-sans-serif, -apple-system, 'Helvetica Neue', 'Segoe UI', Roboto, Arial, sans-serif;
     }
     * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; background: #07060c; color: var(--ink); font-family: var(--sans); overflow: hidden; overscroll-behavior: none; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font-family: var(--sans); overflow: hidden; overscroll-behavior: none; -webkit-font-smoothing: antialiased; }
     canvas#gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; outline: none; }
     canvas#gl.hovering { cursor: pointer; }
-    canvas#gl:active { cursor: grabbing; }
-    .panel { background: var(--bg); border: 1px solid var(--line); backdrop-filter: blur(10px) saturate(1.2); -webkit-backdrop-filter: blur(10px) saturate(1.2); border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06); }
-    button { font: inherit; color: inherit; }
+    button { font: inherit; color: inherit; cursor: pointer; }
+    #vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 55%, transparent 55%, rgba(30, 22, 12, .28) 100%); transition: opacity .4s; }
+    body.pdp #vignette { opacity: 0; }
 
     /* loader */
-    #loader { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 40%, #1d1430 0%, #07060c 70%); transition: opacity .9s ease, visibility .9s; }
+    #loader { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: var(--bg); transition: opacity .8s ease, visibility .8s; }
     #loader.done { opacity: 0; visibility: hidden; }
     #loader .in { text-align: center; padding: 24px; }
-    #loader h1 { font: 400 clamp(40px, 9vw, 92px)/1 var(--serif); letter-spacing: .28em; margin: 0 0 6px .28em; color: var(--gold); text-shadow: 0 0 40px rgba(232,201,130,.35); }
-    #loader p { margin: 0 0 28px; color: var(--mute); font: italic 18px var(--serif); }
-    #loader .bar { width: min(340px, 70vw); height: 3px; margin: 0 auto; background: rgba(232,201,130,.15); border-radius: 3px; overflow: hidden; }
-    #loader .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--gold-d), var(--gold)); transition: width .3s; }
-    #loader small { display: block; margin-top: 14px; color: var(--mute); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; }
+    #loader h1 { font: 400 clamp(34px, 7vw, 64px)/1 var(--serif); letter-spacing: .32em; margin: 0 0 10px .32em; }
+    #loader p { margin: 0 0 30px; color: var(--mute); font-size: 13px; letter-spacing: .18em; text-transform: uppercase; }
+    #loader .bar { width: min(300px, 70vw); height: 2px; margin: 0 auto; background: var(--line); overflow: hidden; }
+    #load-bar { height: 100%; background: var(--ink); transform-origin: left; transform: scaleX(.02); transition: transform .25s; }
+    #load-text { display: block; margin-top: 14px; color: var(--mute); font-size: 12px; }
 
-    /* top left: crest, level, quests */
-    #crest { position: fixed; top: 16px; left: 16px; z-index: 10; padding: 12px 16px 14px; width: 260px; }
-    #crest .row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-    #crest b { font: 400 22px var(--serif); letter-spacing: .22em; color: var(--gold); }
-    #crest .lv { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--mute); white-space: nowrap; }
-    #crest .title { font: italic 13px var(--serif); color: var(--ink); margin-top: 2px; }
-    #xp { height: 6px; border-radius: 6px; margin-top: 8px; background: rgba(255,255,255,.08); overflow: hidden; position: relative; }
-    #xp i { position: absolute; inset: 0 auto 0 0; width: 0%; background: linear-gradient(90deg, #8b5cf6, #e8c982); box-shadow: 0 0 12px #e8c982; transition: width .6s cubic-bezier(.2,.9,.2,1); }
-    #quests { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
-    #quests h4 { margin: 0 0 6px; font: 400 11px var(--sans); letter-spacing: .16em; text-transform: uppercase; color: var(--gold); }
-    #quests li { list-style: none; display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.35; padding: 3px 0; color: var(--ink); }
-    #quests ul { margin: 0; padding: 0; }
-    #quests li i { flex: 0 0 14px; height: 14px; margin-top: 2px; border: 1px solid var(--gold-d); border-radius: 3px; position: relative; }
-    #quests li.done { color: var(--mute); text-decoration: line-through; text-decoration-color: rgba(232,201,130,.5); }
-    #quests li.done i { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 10px var(--gold); }
-    #quests li.done i::after { content: ''; position: absolute; left: 4px; top: 0; width: 4px; height: 8px; border: solid #1a1206; border-width: 0 2px 2px 0; transform: rotate(45deg); }
-    #quests li span.x { margin-left: auto; color: var(--gold); font-size: 11px; white-space: nowrap; }
+    /* top bar */
+    #top { position: fixed; top: 0; left: 0; right: 0; z-index: 20; background: var(--card); backdrop-filter: blur(16px) saturate(1.4); -webkit-backdrop-filter: blur(16px) saturate(1.4); border-bottom: 1px solid var(--line); }
+    #bar { height: 60px; display: flex; align-items: center; gap: 20px; padding: 0 22px; }
+    #logo { display: flex; align-items: baseline; gap: 10px; white-space: nowrap; text-decoration: none; color: inherit; }
+    #logo b { font: 400 22px var(--serif); letter-spacing: .3em; }
+    #logo span { font-size: 11px; color: var(--mute); letter-spacing: .12em; text-transform: uppercase; }
+    #find { position: relative; flex: 1; max-width: 520px; margin: 0 auto; }
+    #search { width: 100%; height: 38px; border-radius: 19px; border: 1px solid var(--line); background: rgba(255,255,255,.9); padding: 0 16px 0 40px; font: 14px var(--sans); color: var(--ink); outline: none; }
+    #search:focus { border-color: rgba(20,20,20,.35); }
+    #find svg { position: absolute; left: 14px; top: 11px; width: 16px; height: 16px; stroke: var(--mute); }
+    #results { position: absolute; top: 44px; left: 0; right: 0; margin: 0; padding: 6px; list-style: none; background: #fff; border-radius: 12px; box-shadow: 0 14px 40px rgba(0,0,0,.14); display: none; }
+    #results.on { display: block; }
+    #results li { padding: 9px 12px; border-radius: 8px; font-size: 14px; cursor: pointer; display: flex; justify-content: space-between; flex-direction: row-reverse; gap: 12px; }
+    #results li:hover { background: #f2efe9; }
+    #results .k { color: var(--mute); font-size: 12px; }
+    #results .none { color: var(--mute); cursor: default; }
+    #acct { display: flex; gap: 6px; align-items: center; }
+    #bag-btn { position: relative; height: 38px; padding: 0 14px 0 12px; border-radius: 19px; border: 1px solid var(--line); background: #fff; display: flex; align-items: center; gap: 8px; font-size: 14px; }
+    #bag-btn svg { width: 18px; height: 18px; stroke: var(--ink); }
+    #bag-count { min-width: 20px; height: 20px; border-radius: 10px; background: var(--red); color: #fff; font: 600 11px/20px var(--sans); text-align: center; padding: 0 6px; }
+    #bag-count.zero { background: #e4e0d9; color: var(--mute); }
+    #bag-btn.bump { animation: bump .5s cubic-bezier(.2,1.6,.4,1); }
+    @keyframes bump { 35% { transform: scale(1.08); } }
+    #depts { display: flex; gap: 2px; padding: 0 16px 8px; overflow-x: auto; scrollbar-width: none; }
+    #depts::-webkit-scrollbar { display: none; }
+    #depts button { flex: none; border: 0; background: none; padding: 7px 12px; border-radius: 16px; font-size: 13px; color: var(--mute); white-space: nowrap; }
+    #depts button:hover { color: var(--ink); background: rgba(20,20,20,.05); }
+    #depts button.on { color: var(--ink); background: rgba(20,20,20,.08); font-weight: 600; }
+    #crumb { position: fixed; top: 112px; left: 22px; z-index: 5; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.92); text-shadow: 0 1px 6px rgba(0,0,0,.45); pointer-events: none; transition: opacity .3s; }
+    body.pdp #crumb { opacity: 0; }
 
-    /* top right: satchel */
-    #satchel { position: fixed; top: 16px; right: 16px; z-index: 10; display: flex; align-items: center; gap: 12px; padding: 10px 16px 10px 12px; cursor: pointer; }
-    #satchel .ico { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 10px; background: radial-gradient(circle at 50% 35%, #3a2a18, #1a1208); border: 1px solid var(--gold-d); position: relative; font-size: 20px; }
-    #satchel .ico em { position: absolute; top: -7px; right: -7px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: var(--red); color: #fff; font: 700 11px/20px var(--sans); text-align: center; font-style: normal; box-shadow: 0 0 0 2px #120c08; }
-    #satchel.bump .ico { animation: bump .6s cubic-bezier(.2,1.6,.4,1); }
-    @keyframes bump { 30% { transform: scale(1.3) rotate(-8deg); } 60% { transform: scale(.95) rotate(4deg); } }
-    #satchel .t small { display: block; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--mute); }
-    #satchel .t b { font: 400 18px var(--serif); color: var(--gold); }
-    #bag { position: fixed; top: 82px; right: 16px; z-index: 12; width: 300px; max-height: 60vh; overflow: auto; padding: 14px 16px; display: none; }
-    #bag.open { display: block; }
-    #bag h4 { margin: 0 0 8px; font: 400 18px var(--serif); color: var(--gold); }
-    #bag ul { margin: 0; padding: 0; }
-    #bag li { list-style: none; display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
-    #bag li b { color: var(--gold); font-weight: 400; font-family: var(--serif); white-space: nowrap; }
-    #bag .empty { color: var(--mute); font: italic 14px var(--serif); }
-    #bag .tot { display: flex; justify-content: space-between; margin-top: 10px; font: 400 16px var(--serif); }
-
-    /* nav */
-    #nav { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 10; display: flex; gap: 6px; padding: 6px; max-width: calc(100vw - 32px); overflow-x: auto; scrollbar-width: none; }
-    #nav::-webkit-scrollbar { display: none; }
-    #nav button { flex: 0 0 auto; border: 1px solid transparent; background: transparent; border-radius: 10px; padding: 7px 11px; font-size: 12px; letter-spacing: .04em; color: var(--ink); cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; transition: background .2s, border-color .2s; }
-    #nav button i { font-style: normal; color: var(--c, var(--gold)); font-size: 14px; text-shadow: 0 0 10px var(--c, var(--gold)); }
-    #nav button:hover, #nav button.here { background: rgba(232,201,130,.1); border-color: var(--line); }
-    #nav button.seen::after { content: '\2726'; font-size: 9px; color: var(--gold); margin-left: 2px; }
-
-    #hint { position: fixed; left: 50%; bottom: 76px; transform: translateX(-50%); z-index: 9; padding: 8px 14px; font-size: 12px; color: var(--mute); white-space: nowrap; transition: opacity 1s; pointer-events: none; }
-    #hint kbd { font: 600 11px var(--sans); color: var(--ink); background: rgba(255,255,255,.08); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 1px 5px; margin: 0 1px; }
-    #hint.hide { opacity: 0; }
-    #cross { position: fixed; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; z-index: 9; display: none; pointer-events: none; }
-    #cross::before, #cross::after { content: ''; position: absolute; background: var(--gold); box-shadow: 0 0 6px var(--gold); }
-    #cross::before { left: 8px; top: 2px; width: 2px; height: 14px; } #cross::after { top: 8px; left: 2px; height: 2px; width: 14px; }
-    body.locked #cross { display: block; }
-
-    #tip { position: fixed; z-index: 11; pointer-events: none; padding: 8px 12px; transform: translate(14px, -50%); opacity: 0; transition: opacity .15s; max-width: 260px; }
-    #tip.on { opacity: 1; }
-    #tip b { display: block; font: 400 15px var(--serif); color: var(--ink); }
-    #tip span { display: inline-block; margin-top: 4px; background: var(--red); color: #fff; font: 700 12px var(--sans); padding: 2px 7px; border-radius: 4px; }
-    #tip small { margin-left: 8px; color: var(--mute); font-size: 11px; }
-
-    /* inspection card */
-    #card { position: fixed; right: 20px; top: 50%; z-index: 20; width: min(360px, calc(100vw - 32px)); padding: 20px 22px; transform: translate(30px, -50%); opacity: 0; visibility: hidden; transition: opacity .45s, transform .55s cubic-bezier(.2,.9,.2,1), visibility .45s; }
-    #card.on { opacity: 1; visibility: visible; transform: translate(0, -50%); }
-    #card .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--c, var(--gold)); }
-    #card h2 { margin: 8px 0 2px; font: 400 26px/1.15 var(--serif); }
-    #card .brand { color: var(--mute); font-size: 13px; }
-    #card .stars { margin-top: 10px; color: #ffcc55; letter-spacing: 2px; font-size: 15px; }
-    #card .stars small { color: var(--mute); letter-spacing: 0; margin-left: 6px; font-size: 12px; }
-    #card .price { display: flex; align-items: center; gap: 12px; margin: 14px 0 10px; }
-    #card .price b { font: 700 28px var(--serif); color: #fff; background: linear-gradient(180deg, #ef2b35, #a50f18); padding: 4px 14px 6px; border-radius: 6px 6px 6px 6px; clip-path: polygon(10px 0, 100% 0, 100% 100%, 10px 100%, 0 50%); padding-left: 20px; }
-    #card .price small { color: #8fe3a0; font-size: 12px; }
-    #card p { margin: 0 0 12px; font: 15px/1.5 var(--serif); color: #e8dcc6; }
-    #card .perks { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
-    #card .perks span { font-size: 11px; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--mute); }
-    #card .set { font: italic 13px var(--serif); color: var(--gold); margin: -4px 0 12px; }
-    #card .act { display: flex; gap: 8px; }
-    #card .act button { flex: 1; padding: 12px 14px; border-radius: 10px; cursor: pointer; font-size: 14px; letter-spacing: .02em; }
-    #add { border: 0; background: linear-gradient(180deg, #f2d48e, #b88a3e); color: #1a1206; font-weight: 700; box-shadow: 0 6px 24px rgba(232,201,130,.35); }
-    #add:hover { filter: brightness(1.08); }
-    #close { border: 1px solid var(--line); background: rgba(255,255,255,.04); flex: 0 0 auto !important; }
-    #card .rot { margin-top: 12px; font-size: 11px; color: var(--mute); text-align: center; }
-
-    #toasts { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 30; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
-    .toast { padding: 10px 18px; font: 15px var(--serif); color: var(--ink); animation: toast 3.4s forwards; white-space: nowrap; }
-    .toast b { color: var(--gold); font-weight: 400; }
-    .toast em { font-style: normal; color: #b48cff; margin-left: 8px; font-family: var(--sans); font-size: 12px; font-weight: 700; }
-    @keyframes toast { 0% { opacity: 0; transform: translateY(-12px) scale(.96); } 10%, 82% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-8px); } }
-    .spark { position: fixed; z-index: 40; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, #fff 0%, #ffd67a 40%, rgba(255,160,60,0) 70%); }
-    .xpfly { position: fixed; z-index: 40; pointer-events: none; font: 700 16px var(--sans); color: #d6b8ff; text-shadow: 0 0 12px #8b5cf6; animation: xpfly 1.4s forwards; }
-    @keyframes xpfly { from { opacity: 0; transform: translate(-50%, 0); } 15% { opacity: 1; } to { opacity: 0; transform: translate(-50%, -60px); } }
-    #levelup { position: fixed; inset: 0; z-index: 35; pointer-events: none; display: grid; place-items: center; opacity: 0; }
-    #levelup.on { animation: lvl 2.4s forwards; }
-    #levelup div { text-align: center; font: 400 48px var(--serif); color: var(--gold); text-shadow: 0 0 40px rgba(232,201,130,.7); letter-spacing: .1em; }
-    #levelup small { display: block; font: italic 18px var(--serif); color: var(--ink); letter-spacing: 0; }
-    @keyframes lvl { 0% { opacity: 0; transform: scale(.8); } 15%, 70% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.1); } }
-
-    #touch { position: fixed; inset: auto 0 76px 0; z-index: 9; display: none; justify-content: space-between; padding: 0 16px; pointer-events: none; }
+    /* hint + touch */
+    #hint { position: fixed; left: 22px; bottom: 20px; z-index: 5; font-size: 12px; color: var(--ink); background: var(--card); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--line); border-radius: 18px; padding: 9px 14px; transition: opacity .6s; }
+    #hint.hide, body.pdp #hint { opacity: 0; pointer-events: none; }
+    #hint kbd { font: 600 11px var(--sans); background: #fff; border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+    #touch { position: fixed; right: 16px; bottom: 18px; z-index: 6; display: none; gap: 8px; }
     body.coarse #touch { display: flex; }
-    #touch div { display: flex; flex-direction: column; gap: 10px; pointer-events: auto; }
-    #touch button { width: 54px; height: 54px; border-radius: 50%; border: 1px solid var(--line); background: var(--bg); backdrop-filter: blur(8px); color: var(--gold); font-size: 20px; touch-action: none; }
-    #touch button:active { background: rgba(232,201,130,.2); }
+    body.pdp #touch { display: none; }
+    #touch button { width: 52px; height: 52px; border-radius: 26px; border: 1px solid var(--line); background: var(--card); backdrop-filter: blur(12px); font-size: 18px; }
 
-    body.capture #hint, body.capture #tip { display: none; }
-    body.inspecting #nav, body.inspecting #touch, body.inspecting #hint { opacity: 0; pointer-events: none; }
-    #nav, #touch { transition: opacity .4s; }
+    /* hover card */
+    #tip { position: fixed; left: 0; top: 0; z-index: 15; pointer-events: none; width: 240px; padding: 10px 12px; border-radius: 10px; background: #fff; box-shadow: 0 10px 30px rgba(0,0,0,.18); opacity: 0; transition: opacity .15s; }
+    #tip.on { opacity: 1; }
+    #tip b { display: block; font-size: 13px; font-weight: 600; line-height: 1.3; }
+    #tip .sub { display: block; font-size: 12px; color: #b07a1a; margin: 3px 0; }
+    #tip .pr { font-size: 14px; font-weight: 700; }
+
+    /* product page */
+    #pdp { position: fixed; z-index: 18; top: 104px; right: 22px; bottom: 22px; width: min(420px, calc(100vw - 44px)); background: #fff; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.12); padding: 26px 28px; overflow: auto; transform: translateX(30px); opacity: 0; pointer-events: none; transition: opacity .35s ease, transform .45s cubic-bezier(.2,.8,.2,1); }
+    body.pdp #pdp { transform: none; opacity: 1; pointer-events: auto; }
+    #p-close { position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; border-radius: 17px; border: 1px solid var(--line); background: #fff; font-size: 16px; }
+    #p-back { position: fixed; z-index: 18; top: 116px; left: 22px; height: 36px; padding: 0 14px; border-radius: 18px; border: 1px solid var(--line); background: #fff; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .3s; }
+    body.pdp #p-back { opacity: 1; pointer-events: auto; }
+    #p-crumb { font-size: 12px; color: var(--mute); letter-spacing: .06em; }
+    #p-name { font: 400 28px/1.15 var(--serif); margin: 8px 40px 4px 0; }
+    #p-by { font-size: 13px; color: var(--mute); }
+    #p-rating { font-size: 13px; color: var(--mute); margin: 10px 0 14px; }
+    #p-rating .st { color: #c58a19; letter-spacing: 1px; }
+    #p-price { font-size: 26px; font-weight: 600; margin-bottom: 16px; }
+    .lbl { font-size: 13px; color: var(--mute); margin-bottom: 8px; }
+    .lbl b { color: var(--ink); font-weight: 600; }
+    .sw { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+    .sw button { width: 34px; height: 34px; border-radius: 17px; border: 0; background: var(--c); box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); outline: 2px solid transparent; outline-offset: 3px; }
+    .sw button.on { outline-color: var(--ink); }
+    #buy { display: flex; gap: 10px; margin: 4px 0 18px; }
+    #qty { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 24px; height: 48px; }
+    #qty button { width: 40px; height: 46px; border: 0; background: none; font-size: 18px; }
+    #p-qty { width: 22px; text-align: center; font-weight: 600; }
+    #p-add { flex: 1; height: 48px; border: 0; border-radius: 24px; background: var(--ink); color: #fff; font-weight: 600; font-size: 15px; }
+    #p-add:hover { background: #000; }
+    #p-ship { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 12px 0; font-size: 13px; color: var(--mute); line-height: 1.7; }
+    #p-ship b { color: #1f7a3a; font-weight: 600; }
+    #p-desc { font-size: 14px; line-height: 1.6; color: #3b3935; margin: 16px 0 0; }
+    #p-hint { position: fixed; z-index: 17; left: 22px; bottom: 22px; font-size: 12px; color: var(--mute); opacity: 0; transition: opacity .3s; }
+    body.pdp #p-hint { opacity: 1; }
+
+    /* bag drawer */
+    #scrim { position: fixed; inset: 0; z-index: 30; background: rgba(20,16,10,.28); opacity: 0; pointer-events: none; transition: opacity .3s; }
+    body.bag-open #scrim { opacity: 1; pointer-events: auto; }
+    #drawer { position: fixed; z-index: 31; top: 0; right: 0; bottom: 0; width: min(400px, 100vw); background: #fff; box-shadow: -20px 0 60px rgba(0,0,0,.15); transform: translateX(105%); transition: transform .45s cubic-bezier(.2,.8,.2,1); display: flex; flex-direction: column; }
+    body.bag-open #drawer { transform: none; }
+    #drawer header { display: flex; justify-content: space-between; align-items: center; padding: 20px 22px; border-bottom: 1px solid var(--line); }
+    #drawer h3 { margin: 0; font: 400 22px var(--serif); }
+    #bag-close { width: 34px; height: 34px; border-radius: 17px; border: 1px solid var(--line); background: #fff; }
+    #bag-list { list-style: none; margin: 0; padding: 8px 22px; flex: 1; overflow: auto; }
+    #bag-list li { display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--line); align-items: flex-start; }
+    #bag-list li i { flex: none; width: 54px; height: 54px; border-radius: 10px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
+    #bag-list li div { flex: 1; font-size: 14px; }
+    #bag-list li b { display: block; font-weight: 600; }
+    #bag-list li span { display: block; color: var(--mute); font-size: 12px; margin: 2px 0 4px; }
+    #bag-list li button { border: 0; background: none; padding: 0; color: var(--mute); font-size: 12px; text-decoration: underline; }
+    #bag-list li em { font-style: normal; font-weight: 600; font-size: 14px; }
+    #bag-list .empty { color: var(--mute); border: 0; }
+    #drawer footer { padding: 18px 22px 24px; border-top: 1px solid var(--line); font-size: 14px; }
+    #drawer footer div { display: flex; justify-content: space-between; margin-bottom: 6px; color: var(--mute); }
+    #drawer footer div.tot { color: var(--ink); font-weight: 700; font-size: 16px; margin: 10px 0 14px; }
+    #checkout { width: 100%; height: 48px; border: 0; border-radius: 24px; background: var(--ink); color: #fff; font-weight: 600; }
+
+    #toast { position: fixed; z-index: 40; left: 50%; bottom: 26px; transform: translate(-50%, 20px); background: var(--ink); color: #fff; padding: 12px 18px; border-radius: 24px; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .3s, transform .4s cubic-bezier(.2,.8,.2,1); white-space: nowrap; max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis; }
+    #toast.on { opacity: 1; transform: translate(-50%, 0); }
+    #fade { position: fixed; inset: 0; z-index: 16; background: var(--bg); opacity: 0; pointer-events: none; transition: opacity .28s ease; }
+    #fade.on { opacity: 1; }
+    body.capture #hint, body.capture #touch { display: none; }
 
     @media (max-width: 760px) {
-      #crest { width: auto; right: 104px; padding: 10px 12px; top: 12px; left: 12px; }
-      #crest b { font-size: 17px; }
-      #quests { display: none; }
-      #crest.open #quests { display: block; }
-      #satchel { top: 12px; right: 12px; padding: 8px; }
-      #satchel .t { display: none; }
-      #bag { top: 72px; right: 12px; width: calc(100vw - 24px); }
+      #bar { gap: 10px; padding: 0 12px; height: 54px; }
+      #logo span { display: none; }
+      #logo b { font-size: 18px; letter-spacing: .2em; }
+      #bag-btn .t { display: none; }
+      #crumb { top: 100px; left: 14px; }
+      #pdp { top: auto; left: 10px; right: 10px; width: auto; bottom: 10px; max-height: 52vh; padding: 20px; transform: translateY(30px); }
+      #p-name { font-size: 22px; }
+      #p-back { top: 104px; left: 12px; }
       #hint { display: none; }
-      #card { top: auto; bottom: 12px; right: 12px; left: 12px; width: auto; transform: translateY(30px); padding: 16px 18px; }
-      #card.on { transform: none; }
-      #card h2 { font-size: 21px; }
-      #card p { font-size: 14px; }
-      #card .perks { display: none; }
-      #nav { bottom: 12px; }
+      #p-hint { display: none; }
     }
-    @media (prefers-reduced-motion: reduce) { .toast, #levelup.on, .xpfly { animation-duration: .01s; } }
   </style>
 </head>
 <body>
-  <canvas id="gl" tabindex="0" aria-label="Arcanum 3D library. Drag to look, W A S D to fly, click a tagged item to inspect it."></canvas>
+  <canvas id="gl" tabindex="0" aria-label="Arcanum store floor"></canvas>
+  <div id="vignette"></div>
+  <div id="fade"></div>
 
-  <div id="loader"><div class="in">
-    <h1>ARCANUM</h1>
-    <p>The Endless Emporium</p>
-    <div class="bar"><i id="lbar"></i></div>
-    <small id="lmsg">Lighting the candles…</small>
-  </div></div>
+  <header id="top">
+    <div id="bar">
+      <a id="logo" href="./"><b>ARCANUM</b><span>Library Department Store</span></a>
+      <div id="find">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="search" type="search" placeholder="Search sofas, watches, books…" autocomplete="off" aria-label="Search the store">
+        <ul id="results"></ul>
+      </div>
+      <div id="acct">
+        <button id="bag-btn" aria-label="Open bag"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M5 8h14l-1.2 12H6.2z"/><path d="M9 8a3 3 0 0 1 6 0"/></svg><span class="t">Bag</span><span id="bag-count" class="zero">0</span></button>
+      </div>
+    </div>
+    <nav id="depts" aria-label="Departments"></nav>
+  </header>
+  <div id="crumb">All departments</div>
 
-  <div id="crest" class="panel">
-    <div class="row"><b>ARCANUM</b><span class="lv" id="lv">Level 1</span></div>
-    <div class="title" id="ltitle">Apprentice Shopper</div>
-    <div id="xp"><i></i></div>
-    <div id="quests"><h4>Quests</h4><ul id="qlist"></ul></div>
-  </div>
+  <div id="tip"></div>
+  <div id="hint"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · drag to look · <kbd>E</kbd>/<kbd>Q</kbd> up/down · click any product or book</div>
+  <div id="touch"><button data-h="back" aria-label="Walk back">↓</button><button data-h="fwd" aria-label="Walk forward">↑</button></div>
 
-  <div id="satchel" class="panel" role="button" tabindex="0" aria-label="Open satchel">
-    <div class="ico">&#128092;<em id="count">0</em></div>
-    <div class="t"><small>Satchel</small><b id="total">$0.00</b></div>
-  </div>
-  <div id="bag" class="panel"><h4>Your satchel</h4><ul id="baglist"></ul><div class="tot"><span>Total</span><b id="bagtotal">$0.00</b></div></div>
-
-  <div id="hint" class="panel">Drag to look · <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> fly · <kbd>Space</kbd>/<kbd>Shift</kbd> up/down · <kbd>F</kbd> flight mode · click any tagged item</div>
-  <div id="cross"></div>
-  <div id="tip" class="panel"><b></b><span></span><small>click to inspect</small></div>
-  <nav id="nav" class="panel" aria-label="Fly to a wing"></nav>
-  <div id="touch"><div><button data-h="fwd" aria-label="Fly forward">&#9650;</button><button data-h="back" aria-label="Fly back">&#9660;</button></div><div><button data-h="up" aria-label="Rise">&#10514;</button><button data-h="down" aria-label="Descend">&#10515;</button></div></div>
-
-  <aside id="card" class="panel" aria-live="polite">
-    <span class="chip" id="cchip"></span>
-    <h2 id="cname"></h2>
-    <div class="brand" id="cbrand"></div>
-    <div class="stars" id="cstars"></div>
-    <div class="price"><b id="cprice"></b><small>&#10003; In stock · owl delivery in 2 days</small></div>
-    <div class="set" id="cset"></div>
-    <p id="cdesc"></p>
-    <div class="perks"><span>&#10022; Enchantment warranty</span><span>Free returns by portal</span><span>Gift-wrap in vellum</span></div>
-    <div class="act"><button id="add">Add to satchel &#10022;</button><button id="close" aria-label="Close inspection">Esc</button></div>
-    <div class="rot">Drag to turn it · scroll to zoom</div>
+  <button id="p-back">← Back to the store</button>
+  <aside id="pdp" aria-label="Product details">
+    <button id="p-close" aria-label="Close">✕</button>
+    <div id="p-crumb"></div>
+    <h2 id="p-name"></h2>
+    <div id="p-by"></div>
+    <div id="p-rating"></div>
+    <div id="p-price"></div>
+    <div id="p-variants"></div>
+    <div id="buy"><div id="qty"><button id="p-minus" aria-label="Fewer">−</button><span id="p-qty">1</span><button id="p-plus" aria-label="More">+</button></div><button id="p-add">Add to bag</button></div>
+    <div id="p-ship"></div>
+    <p id="p-desc"></p>
   </aside>
+  <div id="p-hint">Drag to turn · scroll to zoom</div>
 
-  <div id="toasts"></div>
-  <div id="levelup"><div><span id="lvltext">Level 2</span><small id="lvlsub">Curious Browser</small></div></div>
+  <div id="scrim"></div>
+  <aside id="drawer" aria-label="Bag">
+    <header><h3>Your bag</h3><button id="bag-close" aria-label="Close bag">✕</button></header>
+    <ul id="bag-list"></ul>
+    <footer>
+      <div><span>Subtotal</span><span id="bag-sub">$0.00</span></div>
+      <div><span>Delivery</span><span id="bag-ship">Free</span></div>
+      <div class="tot"><span>Total</span><span id="bag-tot"></span></div>
+      <button id="checkout">Checkout</button>
+    </footer>
+  </aside>
+  <div id="toast"></div>
+
+  <div id="loader"><div class="in"><h1>ARCANUM</h1><p>Library Department Store</p><div class="bar"><div id="load-bar"></div></div><span id="load-text">Opening the doors…</span></div></div>
   <script type="module" src="./src/main.js"></script>
 </body>
 </html>

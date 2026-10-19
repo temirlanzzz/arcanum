@@ -1,7 +1,7 @@
 // First-person flight: WASD/arrows + mouse-look (drag, or pointer lock with F),
 // Space/E up, Shift/Q down, touch drag + on-screen buttons, and eased glides to a wing.
 import * as THREE from 'three';
-import { NAVE_HALF, BAY_BACK, BAYS, BAY_HALF, OPEN_HALF, ARCH_SPRING, HEIGHT, Z_FRONT, Z_END } from './layout.js';
+import { NAVE_HALF, BAY_BACK, BAYS, BAY_HALF, OPEN_HALF, OPEN_TOP, CEIL, Z_FRONT, Z_END } from './layout.js';
 
 const PI = Math.PI;
 const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
@@ -76,7 +76,7 @@ export class Flyer {
     let dyaw = ((yaw - this.yaw + PI) % (2 * PI) + 2 * PI) % (2 * PI) - PI;
     this.glide = { t: 0, dur, p0: this.camera.position.clone(), p1: pos.clone(), y0: this.yaw, y1: this.yaw + dyaw, pi0: this.pitch, pi1: pitch,
       // arc upward mid-flight so long glides sweep over the nave
-      lift: Math.min(6, this.camera.position.distanceTo(pos) * 0.12) };
+      lift: Math.min(1.2, this.camera.position.distanceTo(pos) * 0.04) };
     this.vel.set(0, 0, 0);
   }
   apply() {
@@ -106,7 +106,7 @@ export class Flyer {
     if (k.has('KeyA') || k.has('ArrowLeft')) want.sub(r);
     if (k.has('Space') || k.has('KeyE') || h.has('up')) want.y += 1;
     if (k.has('ShiftLeft') || k.has('ShiftRight') || k.has('KeyQ') || h.has('down')) want.y -= 1;
-    if (want.lengthSq() > 0) want.normalize().multiplyScalar(k.has('ControlLeft') ? 16 : 7.5);
+    if (want.lengthSq() > 0) want.normalize().multiplyScalar(k.has('ControlLeft') ? 7 : 3.2);
     // critically damped approach to the wanted velocity
     this.vel.lerp(want, 1 - Math.exp(-6 * dt));
     const prev = cam.position.clone();
@@ -116,29 +116,23 @@ export class Flyer {
   }
   constrain(prev) {
     const p = this.camera.position;
-    p.y = THREE.MathUtils.clamp(p.y, 0.7, HEIGHT + 8.5);
-    p.z = THREE.MathUtils.clamp(p.z, Z_END + 1.2, Z_FRONT - 0.8);
-    const lim = NAVE_HALF - 0.6;
+    p.y = THREE.MathUtils.clamp(p.y, 0.6, CEIL - 0.5);
+    p.z = THREE.MathUtils.clamp(p.z, Z_END + 0.9, Z_FRONT - 0.7);
+    const lim = NAVE_HALF - 0.7;
     const inBay = Math.abs(prev.x) > lim;
     if (Math.abs(p.x) > lim) {
       const s = Math.sign(p.x);
-      const bay = BAYS.find(b => b.s === s && Math.abs(p.z - b.zc) < BAY_HALF);
-      const through = bay && (inBay ? true : (Math.abs(p.z - bay.zc) < OPEN_HALF - 0.6 && p.y < ARCH_SPRING + Math.sqrt(Math.max(0, (OPEN_HALF - 0.6) ** 2 - (p.z - bay.zc) ** 2)) - 0.5));
-      if (!through) p.x = s * lim;
+      const bay = BAYS.find(b => b.s === s && Math.abs((inBay ? prev.z : p.z) - b.zc) < (inBay ? BAY_HALF : OPEN_HALF - 0.4));
+      if (!bay || (!inBay && p.y > OPEN_TOP - 0.3)) p.x = s * lim;
       else {
-        p.x = s * Math.min(Math.abs(p.x), BAY_BACK - 1.1);
-        p.z = THREE.MathUtils.clamp(p.z, bay.zc - BAY_HALF + 0.7, bay.zc + BAY_HALF - 0.7);
-        p.y = Math.min(p.y, HEIGHT - 0.6);
-        // leaving the bay back into the nave must pass under the arch
-        if (Math.abs(prev.x) > lim && Math.abs(p.x) <= lim + 0.2 && p.y > ARCH_SPRING + OPEN_HALF - 0.8) p.x = s * (lim + 0.21);
+        p.x = s * Math.min(Math.abs(p.x), BAY_BACK - 0.6);
+        p.z = THREE.MathUtils.clamp(p.z, bay.zc - BAY_HALF + 0.6, bay.zc + BAY_HALF - 0.6);
+        // leaving through the opening: stay under the lintel and inside the doorway
+        if (Math.abs(p.x) < NAVE_HALF + 0.4) {
+          p.y = Math.min(p.y, OPEN_TOP - 0.3);
+          p.z = THREE.MathUtils.clamp(p.z, bay.zc - OPEN_HALF + 0.4, bay.zc + OPEN_HALF - 0.4);
+        }
       }
-    } else if (inBay && p.y > ARCH_SPRING + OPEN_HALF - 0.8) {
-      p.x = Math.sign(prev.x) * (lim + 0.21);
-    }
-    // the nave vault
-    if (Math.abs(p.x) <= lim) {
-      const roof = HEIGHT + Math.sqrt(Math.max(0, (NAVE_HALF - 0.6) ** 2 - p.x * p.x));
-      p.y = Math.min(p.y, roof);
     }
   }
 }
