@@ -2,7 +2,7 @@
 // Chromium (SwiftShader), then encodes out/arcanum-demo.mp4 and out/preview.webp with ffmpeg.
 // Usage: npm run build && node scripts/capture.mjs [--still] [--seconds 10] [--fps 30]
 import { spawn, execFileSync } from 'node:child_process';
-import { mkdirSync, rmSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,6 +13,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const out = join(root, 'out'), frames = join(out, 'frames');
 const arg = (name, def) => { const i = process.argv.indexOf(name); return i > 0 ? process.argv[i + 1] : def; };
 const STILL_ONLY = process.argv.includes('--still');
+const VIDEO_ONLY = process.argv.includes('--video-only'), RESUME = process.argv.includes('--resume');
 const SECONDS = +arg('--seconds', 10), FPS = +arg('--fps', 30);
 const POSE = arg('--pose', null);   // "x,y,z,yaw,pitch,t" for a custom still
 
@@ -32,7 +33,7 @@ try {
   };
 
   // hero still at 1600 x 1000
-  {
+  if (!VIDEO_ONLY) {
     const page = await shoot(1600, 1000);
     if (process.env.OPEN) {
       // debugging aid: product pages -> out/pdp-<sku>.png
@@ -65,14 +66,17 @@ try {
     await page.close();
   }
   if (!STILL_ONLY) {
-    rmSync(frames, { recursive: true, force: true }); mkdirSync(frames, { recursive: true });
+    if (!RESUME) rmSync(frames, { recursive: true, force: true });
+    mkdirSync(frames, { recursive: true });
     const page = await shoot(1280, 800);
     const n = Math.round(SECONDS * FPS), t0 = Date.now();
     for (let i = 0; i < n; i++) {
-      const ts = Date.now();
+      const ts = Date.now(), file = join(frames, String(i).padStart(4, '0') + '.jpg');
+      // a resumed run re-simulates finished frames without rendering them
+      if (RESUME && existsSync(file)) { await page.evaluate(dt => window.__advance(dt), 1 / FPS); continue; }
       await page.evaluate(dt => window.__step(dt), 1 / FPS);
       if (i < 3) console.log('step ms', Date.now() - ts);
-      await page.screenshot({ path: join(frames, String(i).padStart(4, '0') + '.jpg'), type: 'jpeg', quality: 92, timeout: 180000 });
+      await page.screenshot({ path: file, type: 'jpeg', quality: 92, timeout: 180000 });
       if (i % 30 === 0) console.log(`frame ${i}/${n} (${((Date.now() - t0) / 1000).toFixed(0)} s)`);
     }
     execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', join(frames, '%04d.jpg'),

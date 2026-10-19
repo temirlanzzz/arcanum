@@ -56,8 +56,9 @@ export function buildHall(scene, T, renderer) {
     return m;
   };
   const mats = {
-    floor: wood(0xd8cbbb, 0.85),
+    floor: wood(0xddc9b0, 0.85),
     walnut: wood(0x6a4a36, 0.9),
+    case: null,
     oak: wood(0xd9c6ae, 0.85),
     plaster: new THREE.MeshStandardMaterial({ color: 0xece6db, roughness: 0.93 }),
     ceiling: new THREE.MeshStandardMaterial({ color: 0xf1ece4, roughness: 0.95 }),
@@ -70,6 +71,7 @@ export function buildHall(scene, T, renderer) {
     paneGlass: new THREE.MeshStandardMaterial({ color: 0xcfd8dd, metalness: 0.1, roughness: 0.04, transparent: true, opacity: 0.18, depthWrite: false }),
     stone: new THREE.MeshStandardMaterial({ color: 0x9b968f, roughness: 0.85 })
   };
+  mats.case = mats.walnut;
   const B = new Batch();
   const W = 0.3; // wall thickness
 
@@ -156,13 +158,13 @@ export function buildHall(scene, T, renderer) {
     const rot = Math.atan2(n.x, n.z); // yaw that maps local +z to n
     const at = (a, h, d) => origin.clone().addScaledVector(t, a).addScaledVector(n, d).setY(h);
     const boxAt = (key, w, h, d, a, y, dd) => { const p = at(a, y, dd); B.box(key, w, h, d, p.x, p.y, p.z, rot, 0.9); };
-    boxAt('walnut', len, y1 - y0, 0.02, len / 2, (y0 + y1) / 2, 0.01); // back
-    for (let i = 0; i <= modules; i++) boxAt('walnut', 0.045, y1 - y0, depth, i * mw, (y0 + y1) / 2, depth / 2);
-    boxAt('walnut', len + 0.08, 0.12, depth + 0.06, len / 2, y1 + 0.06, depth / 2 + 0.03); // cornice
-    if (y0 < 0.2) boxAt('walnut', len, 0.12, depth, len / 2, y0 + 0.06, depth / 2);    // plinth
+    boxAt('case', len, y1 - y0, 0.02, len / 2, (y0 + y1) / 2, 0.01); // back
+    for (let i = 0; i <= modules; i++) boxAt('case', 0.045, y1 - y0, depth, i * mw, (y0 + y1) / 2, depth / 2);
+    boxAt('case', len + 0.08, 0.12, depth + 0.06, len / 2, y1 + 0.06, depth / 2 + 0.03); // cornice
+    if (y0 < 0.2) boxAt('case', len, 0.12, depth, len / 2, y0 + 0.06, depth / 2);    // plinth
     const shelfGap = 0.34, base = y0 < 0.2 ? y0 + 0.12 : y0;
     const levels = []; for (let y = base; y + 0.3 <= y1 - 0.02; y += shelfGap) levels.push(y);
-    for (const y of levels) boxAt('walnut', len, 0.025, depth - 0.02, len / 2, y + 0.0125, depth / 2);
+    for (const y of levels) boxAt('case', len, 0.025, depth - 0.02, len / 2, y + 0.0125, depth / 2);
     cases.push({ origin: origin.clone(), t: t.clone(), n: n.clone(), len, y0: base, y1, levels, depth });
     if (opts.empty) return;
     for (let li = 0; li < levels.length; li++) for (let mi = 0; mi < modules; mi++) {

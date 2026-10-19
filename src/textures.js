@@ -22,7 +22,7 @@ function loadGraded(url, filter) {
 }
 export function loadSurfaceTextures() {
   return {
-    woodMap: loadGraded('./tex/wood_diffuse.webp', 'saturate(42%) contrast(88%) brightness(96%)'), woodBump: load('./tex/wood_bump.webp'), woodRough: load('./tex/wood_rough.webp'),
+    woodMap: loadGraded('./tex/wood_diffuse.webp', 'saturate(62%) contrast(90%) brightness(94%)'), woodBump: load('./tex/wood_bump.webp'), woodRough: load('./tex/wood_rough.webp'),
     fabricMap: load('./tex/fabric_basecolor.png', true), fabricNormal: load('./tex/fabric_normal.png'),
     view: (() => { const t = tl.load('./tex/venice_sunset_1k.jpg'); t.colorSpace = THREE.SRGBColorSpace; return t; })()
   };

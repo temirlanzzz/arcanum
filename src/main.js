@@ -186,7 +186,7 @@ function goToSku(id) {
 let pendingOpen = null;
 
 /* ---------------- loop ---------------- */
-let time = 0;
+let time = 0, skipRender = false;
 function frame(dt) {
   time += dt;
   if (!CAPTURE) flyer.update(dt);
@@ -198,14 +198,14 @@ function frame(dt) {
   if (pending && fade === 1) { const f = pending; pending = null; f(); }
   if (mode === 'pdp' || (mode === 'to-store' && fade > 0.5) || (mode === 'to-pdp' && fade === 1 && !pending)) {
     viewer.update(dt);
-    renderer.render(viewer.scene, viewer.camera);
+    if (!skipRender) renderer.render(viewer.scene, viewer.camera);
     return;
   }
   placeLights(camera.position);
   shop.updateTags(time, camera.position);
   updateHover();
   updateDept();
-  renderer.render(scene, camera);
+  if (!skipRender) renderer.render(scene, camera);
 }
 
 /* ---------------- capture: a scripted visit ---------------- */
@@ -257,6 +257,7 @@ async function start() {
     const px = new Uint8Array(4), gl = renderer.getContext();
     const sync = () => gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
     window.__step = dt => { captureStep(dt); sync(); return time; };
+    window.__advance = dt => { skipRender = true; captureStep(dt); skipRender = false; return time; };
     window.__pose = (x, y, z, yaw, pitch, t = 3) => { camera.position.set(x, y, z); flyer.yaw = yaw; flyer.pitch = pitch; flyer.apply(); time = t; frame(0.0001); sync(); };
     window.__open = async (sku, vi = 0) => {
       const l = shop.listings[sku]; await openProduct({ kind: 'product', listing: l, p: { vi } });
