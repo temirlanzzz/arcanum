@@ -300,6 +300,16 @@ export function buildWorld(scene, renderer, onProgress = () => {}) {
     rune.rotation.x = -PI / 2; rune.position.set(s * 15.4, 0.02, zc);
     scene.add(rune); runes.push({ mesh: rune, speed: 0.08 * (bay.b % 2 ? 1 : -1) });
     // bay light: warm white tinted by the category
+    // floating lantern: the visible source of the wing's warm point light
+    mg.add('glow', new THREE.SphereGeometry(0.16, 16, 12), new THREE.Color(0xffd9a0), M(s * 15.4, 4.5, zc), 2.4);
+    mg.add('gold', new THREE.TorusGeometry(0.42, 0.025, 6, 40), gold, M(s * 15.4, 4.5, zc, PI / 2, 0, 0));
+    mg.add('gold', new THREE.TorusGeometry(0.3, 0.018, 6, 32), gold, M(s * 15.4, 4.5, zc, 0, 0, 0));
+    mg.add('gold', new THREE.TorusGeometry(0.3, 0.018, 6, 32), gold, M(s * 15.4, 4.5, zc, 0, PI / 2, 0));
+    for (let k = 0; k < 6; k++) {
+      const a = (k / 6) * PI * 2;
+      mg.add('wood', new THREE.CylinderGeometry(0.03, 0.03, 0.14, 8), 0xf4e6c8, M(s * 15.4 + Math.cos(a) * 0.42, 4.6, zc + Math.sin(a) * 0.42));
+      mg.add('glow', new THREE.ConeGeometry(0.02, 0.06, 6), new THREE.Color(0xffb050), M(s * 15.4 + Math.cos(a) * 0.42, 4.71, zc + Math.sin(a) * 0.42), 2.2);
+    }
     bayLights.push({
       color: new THREE.Color(0xffe2c0).lerp(catCol, 0.3),
       rect: new THREE.Vector3(s * 21.3, 4.1, zc), look: new THREE.Vector3(s * BAY_BACK, 1.5, zc),
@@ -324,7 +334,7 @@ export function buildWorld(scene, renderer, onProgress = () => {}) {
     });
   }
   function updateLights(camPos) {
-    assign(rectPool, camPos, 6.5, (l, b) => { l.position.copy(b.rect); l.lookAt(b.look); });
+    assign(rectPool, camPos, 5.2, (l, b) => { l.position.copy(b.rect); l.lookAt(b.look); });
     assign(pointPool, camPos, 18, (l, b) => { l.position.copy(b.point); l.color.copy(b.color); });
   }
 

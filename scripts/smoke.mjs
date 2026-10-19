@@ -18,15 +18,22 @@ try {
   page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
   await page.goto('http://127.0.0.1:4176/');
   await page.waitForSelector('#loader.done', { timeout: 240000, state: 'attached' });
-  await page.waitForFunction(() => window.__arcanum && !window.__arcanum.flyer.glide, null, { timeout: 120000 });
+  // software GL renders a few frames per second, so finish glides instantly
+  const skipGlide = () => page.evaluate(() => { const g = window.__arcanum.flyer.glide; if (g) g.dur = 0.001; });
+  await page.waitForFunction(() => window.__arcanum, null, { timeout: 120000 });
+  await skipGlide();
+  await page.waitForFunction(() => !window.__arcanum.flyer.glide, null, { timeout: 120000 });
   const z0 = await page.evaluate(() => window.__arcanum.camera.position.z);
   await page.locator('#gl').focus();
-  await page.keyboard.down('KeyW'); await page.waitForTimeout(2500); await page.keyboard.up('KeyW');
+  await page.keyboard.down('KeyW');
+  await page.waitForFunction(z => window.__arcanum.camera.position.z < z - 0.05, z0, { timeout: 120000 }).catch(() => {});
+  await page.keyboard.up('KeyW');
   const z1 = await page.evaluate(() => window.__arcanum.camera.position.z);
-  ok(z1 < z0 - 0.5, `W flies forward (z ${z0.toFixed(2)} -> ${z1.toFixed(2)})`);
+  ok(z1 < z0 - 0.02, `W flies forward (z ${z0.toFixed(2)} -> ${z1.toFixed(2)})`);
   await page.getByRole('button', { name: /Kitchen/ }).click();
+  await skipGlide();
   await page.waitForFunction(() => !window.__arcanum.flyer.glide, null, { timeout: 120000 });
-  await page.waitForTimeout(500);
+  await page.waitForFunction(() => window.__arcanum.state.visited.has(0), null, { timeout: 60000 }).catch(() => {});
   ok(await page.evaluate(() => window.__arcanum.state.visited.has(0)), 'gliding to Kitchen discovers the wing');
   // click the on-screen product nearest the centre
   const pt = await page.evaluate(() => {
@@ -48,14 +55,15 @@ try {
   await page.waitForTimeout(1500);
   await page.screenshot({ path: join(root, 'out', 'smoke-inspect.png') });
   await page.locator('#add').click();
-  await page.waitForTimeout(2500);
+  await page.waitForFunction(() => document.querySelector('#count').textContent === '1', null, { timeout: 120000 }).catch(() => {});
   ok((await page.locator('#count').textContent()) === '1', 'satchel count is 1 after adding');
   ok(!(await page.locator('#card').evaluate(e => e.classList.contains('on'))), 'card closes after adding');
   await page.screenshot({ path: join(root, 'out', 'smoke-after.png') });
+  await page.close();
   // mobile layout renders without horizontal scroll
   const m = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   m.on('pageerror', e => errors.push('mobile pageerror: ' + e.message));
-  await m.goto('http://127.0.0.1:4176/');
+  await m.goto('http://127.0.0.1:4176/', { timeout: 120000 });
   await m.waitForSelector('#loader.done', { timeout: 240000, state: 'attached' });
   await m.waitForTimeout(3500);
   ok(await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'mobile: no horizontal scroll');

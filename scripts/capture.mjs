@@ -42,13 +42,14 @@ try {
         await page.screenshot({ path: join(out, `pose-${i++}.png`) });
       }
       await page.close();
+      await browser.close(); server.kill();
       process.exit(0);
     } else if (POSE) {
       const p = POSE.split(',').map(Number);
       await page.evaluate(p => window.__pose(...p), p);
     } else {
-      // advance the cinematic to the hero moment (warm-up a few frames so tags settle)
-      for (let t = 0; t < 4.9; t += 0.7) await page.evaluate(dt => window.__step(dt), 0.7);
+      // hero still: the Furniture wing seen from under its arch
+      await page.evaluate(() => window.__pose(-8, 3.0, -24, 1.07, -0.2, 3));
     }
     await page.screenshot({ path: join(out, 'preview.png'), timeout: 180000 });
     execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', join(out, 'preview.png'), '-quality', '86', join(out, 'preview.webp')]);

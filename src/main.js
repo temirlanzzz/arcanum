@@ -66,10 +66,10 @@ camera.position.set(0, 9, 4.5);
 // Inspection happens in its own little scene, composited over a dimmed library.
 const inspectScene = new THREE.Scene();
 inspectScene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-inspectScene.environmentIntensity = 0.9;
-const key = new THREE.DirectionalLight(0xfff0dd, 2.6); key.position.set(2, 3, 2);
-const rim = new THREE.DirectionalLight(0x9db8ff, 2.0); rim.position.set(-3, 1, -2);
-inspectScene.add(key, rim, new THREE.AmbientLight(0xffffff, 0.25));
+inspectScene.environmentIntensity = 0.55;
+const key = new THREE.DirectionalLight(0xfff0dd, 1.5); key.position.set(2, 3, 2);
+const rim = new THREE.DirectionalLight(0x9db8ff, 1.3); rim.position.set(-3, 1, -2);
+inspectScene.add(key, rim, new THREE.AmbientLight(0xffffff, 0.15));
 inspectScene.visible = false;
 
 class InspectPass extends Pass {
@@ -199,7 +199,7 @@ function buildInspectGroup(l) {
   const byMat = {};
   for (const p of parts) {
     const g = p.g;
-    const c = new THREE.Color(p.c); if (p.m === 'glow') c.multiplyScalar(1.5);
+    const c = new THREE.Color(p.c); if (p.m === 'glow') c.multiplyScalar(1.15);
     const n = g.attributes.position.count, a = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) { a[i * 3] = c.r; a[i * 3 + 1] = c.g; a[i * 3 + 2] = c.b; }
     g.setAttribute('color', new THREE.BufferAttribute(a, 3));
@@ -219,7 +219,7 @@ function buildInspectGroup(l) {
 // glowing pedestal ring under the inspected object
 const halo = new THREE.Group();
 {
-  const ringMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 1.6, 0.8), transparent: true, opacity: 0.9 });
+  const ringMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.3, 0.95, 0.5), transparent: true, opacity: 0.9 });
   const r1 = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.006, 6, 96), ringMat);
   const r2 = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.003, 6, 96), ringMat);
   r1.rotation.x = r2.rotation.x = PI / 2;
@@ -258,7 +258,7 @@ function closeInspect() {
   UI.closeCard();
 }
 function addToSatchel() {
-  if (!inspect || inspect.phase !== 'hold') return;
+  if (!inspect || (inspect.phase !== 'hold' && inspect.phase !== 'in')) return;
   const l = inspect.l;
   UI.state.satchel.push(l);
   inspect.phase = 'bag'; inspect.t = 0;
@@ -272,7 +272,7 @@ function addToSatchel() {
 UI.bindStatic({ onAdd: addToSatchel, onClose: closeInspect });
 addEventListener('keydown', e => {
   if (e.code === 'Escape') closeInspect();
-  if (e.code === 'Enter' && inspect?.phase === 'hold') addToSatchel();
+  if (e.code === 'Enter') addToSatchel();
 });
 flyer.onClick = (x, y) => {
   if (inspect) return;
@@ -387,9 +387,9 @@ const KEYS = [
   [0.0, [0, 11.5, 4.6], 0.0, -0.13],
   [2.4, [0.6, 7.6, -5.5], -0.12, -0.1],
   [4.3, [6.2, 3.6, -9.6], -1.05, -0.07],
-  [6.0, [15.4, 1.95, -9.9], -PI / 2, -0.1],
-  [7.5, [16.2, 1.85, -9.9], -PI / 2 - 0.02, -0.1],
-  [10.5, [16.8, 1.8, -10.1], -PI / 2 - 0.05, -0.09]
+  [6.0, [16.6, 1.85, -7.6], -PI / 2 + 0.05, -0.1],
+  [7.5, [17.8, 1.75, -7.4], -PI / 2 + 0.02, -0.1],
+  [10.5, [18.6, 1.7, -7.2], -PI / 2 - 0.03, -0.09]
 ];
 const curve = new THREE.CatmullRomCurve3(KEYS.map(k => new THREE.Vector3(...k[1])), false, 'centripetal');
 function cinematic(t) {
@@ -406,7 +406,7 @@ function captureStep(dt) {
   const t = time + dt;
   cinematic(t);
   if (!capEvents) {
-    const cands = shop.listings.filter(l => l.cat.id === 'electronics' && ['headphones', 'laptop', 'orb', 'vr'].includes(l.key));
+    const cands = shop.listings.filter(l => l.cat.id === 'electronics' && !l.hero && ['headphones', 'laptop', 'camera', 'speaker'].includes(l.key));
     capEvents = { hoverAt: 5.7, openAt: 6.6, addAt: 8.7, target: null, cands };
   }
   if (t >= capEvents.hoverAt && !capEvents.target) {

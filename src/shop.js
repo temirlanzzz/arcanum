@@ -81,7 +81,7 @@ export function buildShop(scene, woodMap, onProgress = () => {}) {
         const g = p.g.clone().applyMatrix4(m);
         const n = g.attributes.position.count;
         const c = new THREE.Color(p.c);
-        if (p.m === 'glow') c.multiplyScalar(1.5);
+        if (p.m === 'glow') c.multiplyScalar(1.15);
         const ca = new Float32Array(n * 3), pa = new Float32Array(n).fill(l.pid);
         for (let i = 0; i < n; i++) { ca[i * 3] = c.r; ca[i * 3 + 1] = c.g; ca[i * 3 + 2] = c.b; }
         g.setAttribute('color', new THREE.BufferAttribute(ca, 3));

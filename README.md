@@ -13,11 +13,11 @@ vault are made in code at startup. There are no image or model downloads.
 - **A nave and ten wings.** Kitchen, Electronics, Furniture, Books, Beauty, Garden,
   Fashion, Toys & Games, Sports and Tools. Each wing has its own wood, accent light,
   rune circle, banner and sign.
-- **About 700 listings, around 1,800 product models and 34,000 books.** There are 90
-  procedural product types: copper pots, a teapot, laptops with glowing screens,
-  headphones, potions, monsteras, sneakers, drills, a Rubik-style rune cube and more.
-  Products of the same material are merged into one mesh, so the whole shop draws in
-  eight calls. Books are a single `InstancedMesh`.
+- **730 listings and 34,000 books.** Listings are often stocked two or three deep.
+  There are 98 procedural product builders: copper pots, a teapot, laptops with glowing
+  screens, headphones, potions, monsteras, sneakers, drills, a Rubik-style rune cube
+  and more. Products are merged per wing and per material, so the shop draws in a few
+  dozen calls and whole wings are frustum-culled. Books use one `InstancedMesh` per wing.
 - **Furniture that comes in sets.** The Furniture wing stages four rooms (lounge,
   study, dining, bedroom) whose pieces are sized and placed to stand together. Each
   piece is still its own listing.
@@ -69,6 +69,8 @@ even on a software GPU.
 ```bash
 npm run build
 node scripts/capture.mjs    # out/preview.webp and out/arcanum-demo.mp4 (needs ffmpeg + Playwright)
+# both scripts default to the Playwright and Chromium paths of the machine they were
+# written on; set PLAYWRIGHT_PATH and CHROMIUM to point at yours
 node scripts/smoke.mjs      # loads, flies, opens a product, adds it to the satchel
 ```
 
