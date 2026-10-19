@@ -24,6 +24,9 @@ renderer.toneMapping = THREE.NeutralToneMapping;
 renderer.toneMappingExposure = 1.0;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.VSMShadowMap;
+// The sun and the hall never move, so the (expensive, blurred) shadow map is
+// only redrawn when the shadow box steps to a new grid cell around the shopper.
+renderer.shadowMap.autoUpdate = false;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xe9e4dc);
@@ -79,9 +82,16 @@ async function build() {
 }
 
 const _v = new THREE.Vector3();
+let sunCell = '';
 function placeLights(cam) {
-  sun.position.set(cam.x + 5, cam.y + 12, cam.z + 6);
-  sun.target.position.set(cam.x, 0, cam.z);
+  const cx = Math.round(cam.x / 4) * 4, cz = Math.round(cam.z / 4) * 4, cell = cx + ',' + cz;
+  if (cell !== sunCell) {
+    sunCell = cell;
+    sun.position.set(cx + 5, cam.y + 12, cz + 6);
+    sun.target.position.set(cx, 0, cz);
+    sun.target.updateMatrixWorld();
+    renderer.shadowMap.needsUpdate = true;
+  }
   const near = hall.pendants.map(p => [p, p.distanceToSquared(cam)]).sort((a, b) => a[1] - b[1]).slice(0, pool.length);
   near.forEach(([p], i) => pool[i].position.copy(p));
 }
