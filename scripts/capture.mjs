@@ -14,7 +14,7 @@ const out = join(root, 'out'), frames = join(out, 'frames');
 const arg = (name, def) => { const i = process.argv.indexOf(name); return i > 0 ? process.argv[i + 1] : def; };
 const STILL_ONLY = process.argv.includes('--still');
 const VIDEO_ONLY = process.argv.includes('--video-only'), RESUME = process.argv.includes('--resume');
-const SECONDS = +arg('--seconds', 10), FPS = +arg('--fps', 30);
+const SECONDS = +arg('--seconds', 10), FPS = +arg('--fps', 30), W = +arg('--w', 1280), H = +arg('--h', 800);
 const POSE = arg('--pose', null);   // "x,y,z,yaw,pitch,t" for a custom still
 
 const server = spawn('npx', ['vite', 'preview', '--port', '4174', '--strictPort'], { cwd: root, stdio: 'ignore' });
@@ -68,7 +68,7 @@ try {
   if (!STILL_ONLY) {
     if (!RESUME) rmSync(frames, { recursive: true, force: true });
     mkdirSync(frames, { recursive: true });
-    const page = await shoot(1280, 800);
+    const page = await shoot(W, H);
     const n = Math.round(SECONDS * FPS), t0 = Date.now();
     for (let i = 0; i < n; i++) {
       const ts = Date.now(), file = join(frames, String(i).padStart(4, '0') + '.jpg');
@@ -79,8 +79,10 @@ try {
       await page.screenshot({ path: file, type: 'jpeg', quality: 92, timeout: 180000 });
       if (i % 30 === 0) console.log(`frame ${i}/${n} (${((Date.now() - t0) / 1000).toFixed(0)} s)`);
     }
+    // Low frame rates (cheaper on a software GPU) are motion-interpolated up to 30 fps.
+    const vf = (FPS < 30 ? `minterpolate=fps=30:mi_mode=mci:mc_mode=aobmc,` : '') + 'scale=1280:800:flags=lanczos';
     execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', join(frames, '%04d.jpg'),
-      '-c:v', 'libx264', '-preset', 'slow', '-crf', '28', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-vf', 'scale=1280:800', join(out, 'arcanum-demo.mp4')]);
+      '-c:v', 'libx264', '-preset', 'slow', '-crf', '28', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-vf', vf, join(out, 'arcanum-demo.mp4')]);
     console.log('arcanum-demo.mp4', statSync(join(out, 'arcanum-demo.mp4')).size, 'bytes');
     await page.close();
   }
